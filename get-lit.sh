@@ -17,26 +17,14 @@ _luvi_bin="${LUVI_PREFIX}/luvi"
 _lit_bin="${LUVI_PREFIX}/lit"
 _luvit_bin="${LUVI_PREFIX}/luvit"
 
-_newline="
-"
-
-_cleanup=""
 cleanup() {
     _exit=$1
 
-    if [ -n "${_cleanup}" ]; then
-        echo "[*] Cleaning up"
-        echo "${_cleanup}" | xargs rm -f
-    fi
+    echo "[*] Cleaning up"
+    rm -f "${_lit_zip}"
+    rm -f "${_luvit_zip}"
     exit "${_exit}"
 }
-
-add_cleanup() {
-    [ -n "${_cleanup}" ] && _cleanup="${_cleanup}${_newline}"
-    _cleanup="${_cleanup}$1"
-}
-
-trap 'echo "[#] Cancelling installation"; cleanup 1' INT TERM
 
 # download a file from $1 and save it as $2
 download() {
@@ -44,7 +32,6 @@ download() {
     _file=$2
 
     echo "[*] Downloading ${_file} from ${_url}"
-    add_cleanup "${_file}"
 
     # --retry requires curl 7.12.3, from 2004
     _status="$(curl --retry 5 --retry-delay 5 -#Lfo "${_file}" -w "%{http_code}" "${_url}")"
@@ -76,13 +63,14 @@ version_gte() {
 
 _luvi_url="https://github.com/luvit/luvi/releases/download/${LUVI_VERSION}/luvi-regular-${LUVI_OS}_${LUVI_ARCH}"
 _lit_url="https://lit.luvit.io/packages/luvit/lit/${LIT_VERSION}.zip"
-_luvit_url="https://lit.luvit.io/packages/luvit/luvit/latest.zip"
+_luvit_url="https://lit.luvit.io/packages/luvit/luvit/${LUVIT_VERSION}.zip"
 
-if version_gte "${LUVI_VERSION}" "2.15.0"; then # select the new release format
+if [ "${LUVI_VERSION}" = "latest" ] || version_gte "${LUVI_VERSION}" "2.15.0"; then # select the new release format
     _luvi_url="https://github.com/luvit/luvi/releases/download/${LUVI_VERSION}/luvi-${LUVI_OS}-${LUVI_ARCH}-${LUVI_ENGINE}-regular"
 fi
 
 echo "[+] Installing luvit, lit and luvi to ${LUVI_PREFIX}"
+trap 'echo "[#] Cancelling installation"; cleanup 1' INT TERM
 
 # Download Luvi, and the sources for Lit and Luvit
 
@@ -101,7 +89,6 @@ fi
 # Install lit
 
 echo "[*] Creating lit from lit.zip"
-add_cleanup "${_lit_bin}"
 "${_luvi_bin}" "${_lit_zip}" -- make "${_lit_zip}" "${_lit_bin}" "${_luvi_bin}"
 if [ ! -x "${_lit_bin}" ]; then
     echo "[!] Could not create lit"
@@ -111,7 +98,6 @@ fi
 # Install luvit
 
 echo "[*] Creating luvit from luvit.zip"
-add_cleanup "${_luvit_bin}"
 "${_lit_bin}" make "${_luvit_zip}" "${_luvit_bin}" "${_luvi_bin}"
 if [ ! -x "${_luvit_bin}" ]; then
     echo "[!] Could not create luvit"
