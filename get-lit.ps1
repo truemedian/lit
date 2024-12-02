@@ -58,26 +58,41 @@ $lit_bin = Join-Path "${LUVI_PREFIX}" "lit${exe_suffix}"
 $luvit_bin = Join-Path "${LUVI_PREFIX}" "luvit${exe_suffix}"
 
 function Cleanup([int] $exit_code) {
-  try { Remove-Item $lit_zip -Force } catch {}
-  try { Remove-Item $luvit_zip -Force } catch {}
+  if (Test-Path $lit_zip) { Remove-Item $lit_zip -Force }
+  if (Test-Path $luvit_zip) { Remove-Item $luvit_zip -Force }
   exit $exit_code
 }
 
 function Download([string] $url, [string] $file) {
   Write-Host "[*] Downloading ${file} from ${url}"
 
-  try {
-    if ($PSVersionTable.PSVersion.Major -ge 6) {
-      Invoke-WebRequest -Uri $url -OutFile $file -MaximumRetryCount 5 -RetryIntervalSec 5 -UseBasicParsing
+  [Net.ServicePointManager]::SecurityProtocol = 'Tls12'
+  $client = New-Object System.Net.WebClient
+  $client.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
+  for ($i = 5; $i -ge 0; $i--) {
+    try {
+      $client.DownloadFile($url, $file)
+      return
     }
-    else {
-      Invoke-WebRequest -Uri $url -OutFile $file -UseBasicParsing
+    catch [Net.WebException] {
+      if ($null -ne $_.Exception.Response) {
+        $status = [int]$_.Exception.Response.StatusCode
+
+        Write-Host "[!] Failed to download ${url} to ${file} (HTTP ${status})"
+      }
+      else {
+        Write-Host "[!] Failed to download ${url} to ${file} ($($_.Exception.Message))"
+      }
+
+      if ($i -gt 0) {
+        Write-Host "[*] Retrying in 5 seconds"
+        Start-Sleep 5
+      }
     }
   }
-  catch {
-    Write-Host "[!] Failed to download ${url} to ${file}"
-    Cleanup 1
-  }
+
+  Write-Host "[!] Failed to download ${url} to ${file}"
+  Cleanup 1
 }
 
 function VersionGTE([string] $a, [string] $b) {
