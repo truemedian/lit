@@ -1,7 +1,7 @@
 local jsonStringify = require('json').stringify
 local uv = require('uv')
 local scandir = require('coro-fs').scandir
-local exists = require('coro-fs').exists
+local access = require('coro-fs').access
 
 return function (_, res)
   local handles = {}
@@ -23,7 +23,7 @@ return function (_, res)
 
   -- Count file descriptors
   local path = "/proc/self/fd"
-  if not exists(path) then
+  if not access(path) then
     path = "/dev/fd"
   end
   local entries = 0
