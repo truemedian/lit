@@ -15,10 +15,13 @@ return function ()
   local app = require('weblit-app')
   require 'weblit-websocket'
 
+  uv.fs_unlink('/srv/lit/run/lit.sock')
+
   -- Listen on port 4822
   app.bind({
-    host = "0.0.0.0",
-    port = 4822,
+    path = '/srv/lit/run/lit.sock',
+  --   host = "0.0.0.0",
+  --   port = 4822,
   })
 
   -- Log requests
@@ -106,6 +109,8 @@ return function ()
   .use(handleRequest)
 
   .start()
+
+  uv.fs_chmod('/srv/lit/run/lit.sock', tonumber('666', 8))
   -- Never return so that the command keeps running.
   coroutine.yield()
 end

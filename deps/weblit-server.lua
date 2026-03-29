@@ -131,7 +131,7 @@ local function newServer(run)
   end
 
   function server.bind(options)
-    if not options.port then
+    if not options.port and not options.path then
       local getuid = require('uv').getuid
       options.port = (getuid and getuid() == 0) and
         (options.tls and 443 or 80) or
@@ -149,10 +149,10 @@ local function newServer(run)
     local function show(options)
       local protocol = options.tls and 'https' or 'http'
       local port = ""
-      if options.port ~= (options.tls and 443 or 80) then
+      if options.port ~= (options.tls and 443 or 80) and not options.path then
         port = ":" .. options.port
       end
-      local host = options.host
+      local host = options.host or options.path
       if host:match(":") then host = "[" .. host .. "]" end
       print("    " .. protocol .. '://' .. host .. port .. '/')
     end
@@ -161,7 +161,7 @@ local function newServer(run)
 
     for i = 1, #bindings do
       local options = bindings[i]
-      if options.host then
+      if options.host or options.path then
         show(options)
       end
     end
@@ -175,7 +175,7 @@ local function newServer(run)
           local entry = list[i]
           ips[entry.addr .. " " .. options.port] = options
         end
-      else
+      elseif not options.path then
         for name, list in pairs(uv.interface_addresses()) do
           for i = 1, #list do
             local data = list[i]
@@ -184,6 +184,8 @@ local function newServer(run)
             end
           end
         end
+      else
+        ips[options.path] = options
       end
     end
 
