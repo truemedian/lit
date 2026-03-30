@@ -139,7 +139,7 @@ metrics.define("lua.fds.used")
 
 -- Define other metrics here.
 metrics.define("lit.url._slash") -- just /
-local mettab = {"blobs", "trees", "packages.zip", "packages", "search"}
+local mettab = {"blobs", "trees", "packages.zip", "packages", "packages.all", "search"}
 for i = 1, #mettab do
   metrics.define("lit.url."..mettab[i])
 end
@@ -358,6 +358,25 @@ return function (db, prefix)
         authors[author] =  prefix .. "/packages/" .. author
       end
       return next(authors) and authors
+    end,
+    "^/packages.all$", function ()
+      metrics.increment("lit.url.packages.all")
+      metrics.increment("lit.totals.url")
+      local all = {}
+      for author in db.authors() do
+        for package in db.names(author) do
+          for version in db.versions(author, package) do
+            local meta = loadMeta(author, package, version)
+
+            if meta then
+              all[author .. "/" .. package .. "/" .. version] = meta.tagger.date.seconds + meta.tagger.date.offset
+            else
+              all[author .. "/" .. package .. "/" .. version] = 0
+            end
+          end
+        end
+      end
+      return next(all) and all
     end,
     "^/search/(.*)$", function (raw)
       metrics.increment("lit.url.search")
