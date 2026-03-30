@@ -55,7 +55,7 @@ return function ()
   }, function (req, read, write)
     -- Log the client connection
     local peerName = req.socket:getpeername()
-    peerName = peerName.ip .. ':' .. peerName.port
+    peerName = req.headers["X-Forwarded-For"] or (peerName.port and (peerName.ip .. ':' .. peerName.port)) or ''
     log("client connected", peerName)
 
     -- Process the client using server handles
